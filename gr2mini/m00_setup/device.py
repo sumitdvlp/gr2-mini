@@ -11,7 +11,11 @@ def get_device(prefer: str = "cuda") -> torch.device:
     prefer = "cpu"            -> cpu
     anything else             -> ValueError
     """
-    return torch.device("cuda" if prefer in ("cuda", "auto") and torch.cuda.is_available() else "cpu")
+    if prefer in ("cuda", "auto"):
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if prefer == "cpu":
+        return torch.device("cpu")
+    raise ValueError(f"Invalid device preference: {prefer!r}")
 
 
 def pick_dtype(device: torch.device, prefer: str = "fp16") -> torch.dtype:
@@ -28,6 +32,8 @@ def pick_dtype(device: torch.device, prefer: str = "fp16") -> torch.dtype:
     Do NOT use torch.cuda.is_bf16_supported(): it also counts slow emulated bf16.
     """
     if device.type == "cpu":
+        if prefer not in ("fp16", "bf16", "fp32"):
+            raise ValueError(f"Invalid prefer={prefer!r} for device {device}")
         return torch.float32
     if prefer == "fp32":
         return torch.float32
