@@ -1,0 +1,14 @@
+# Install PyTorch FIRST, with CUDA 12.6 wheels (these support the GTX 1660 Ti / Turing, sm_75):
+#   python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126
+# Then:
+#   python -m pip install -r requirements.txt
+# Versions below are the ones this repo was set up and tested with.
+numpy==2.5.4
+PyYAML==6.0.3
+pytest==9.2.0
+tqdm==4.70.1
+requests==2.34.2
+sentence-transformers==6.2.0
+transformers==5.22.1
+peft==0.21.2
+accelerate==1.15.0

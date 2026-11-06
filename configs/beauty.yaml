@@ -1,0 +1,44 @@
+# Full Amazon Beauty (5-core) — the dataset used in the paper (Table 1: 22,363 users, 12,101 items).
+seed: 42
+device: cuda            # "cuda" (falls back to cpu if unavailable) or "cpu"
+
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  artifacts_dir: artifacts
+
+data:
+  reviews_url: https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Beauty_5.json.gz
+  meta_url: https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/meta_Beauty.json.gz
+  kcore: 5              # keep users & items with >= 5 interactions (paper §5.1.1)
+  max_users: null       # null = all users; an int = random subset (used by tiny.yaml)
+
+text_embed:
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  batch_size: 256
+  normalize: true
+
+rqvae:                  # paper §2.1-2.3, Appendix A
+  hidden_dims: [256, 128]
+  latent_dim: 32
+  num_levels: 4         # SID length (paper examples use 4 levels: a, b, c, d)
+  codebook_size: 256    # codes per level
+  use_ema: true         # EMA codebook updates (biggest uniqueness win in Table 2)
+  ema_decay: 0.99       # paper: gamma in [0.95, 0.99]
+  dead_code_threshold: 2  # tau: reset a code after this many consecutive unused batches (null = off)
+  commitment_weight: 0.25
+  codebook_weight: 1.0  # only used when use_ema is false
+  diversity_weight: 0.0   # lambda_div; paper's best config (Table 3) has it OFF; ablation value 0.1
+  diversity_temperature: 1.0
+  contrastive_weight: 0.1 # paper's best config uses the co-engagement contrastive loss
+  contrastive_temperature: 0.1
+  coengagement_window: 1  # items within this many positions in a sequence are "co-engaged"
+  kmeans_iters: 20
+  epochs: 300
+  batch_size: 1024
+  lr: 0.001
+  eval_every: 25
+
+sids:
+  random_last_levels: 1   # M in Eq. 10: last M levels drawn uniformly at random at assignment time
+  max_collision_rounds: 100

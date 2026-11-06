@@ -1,0 +1,16 @@
+# A small slice of Beauty for fast iteration: every stage should run in seconds-to-minutes.
+# Only the keys that differ from beauty.yaml are listed here (see m00 for how `extends` works).
+extends: beauty.yaml
+
+paths:
+  processed_dir: data/processed_tiny
+  artifacts_dir: artifacts/tiny
+
+data:
+  max_users: 2000       # sampled AFTER the 5-core filter, so every user still has >= 5 interactions
+
+rqvae:
+  codebook_size: 64
+  epochs: 60
+  batch_size: 256
+  eval_every: 10
