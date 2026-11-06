@@ -19,6 +19,8 @@ def rollout_group(
     * model.eval(), model.config.use_cache = True; model.generate(prompt, do_sample=True, temperature,
       max_new_tokens, num_return_sequences=group_size, pad_token_id=tokenizer.pad_token_id);
       restore training mode and use_cache afterwards
+    * like m07 generate_chat: merge_adapter() before generating and unmerge_adapter() after (try/finally)
+      if the model has those methods. Rollouts are most of RL's wall-clock time, so the 1.6x matters.
     Returns {"prompt_ids": LongTensor [Tp] (CPU), "completion_ids": LongTensor [G, Tc] (CPU, the new tokens),
              "texts": [decoded completions with skip_special_tokens=True, stripped]}
     """

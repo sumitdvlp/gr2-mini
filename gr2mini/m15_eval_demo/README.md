@@ -21,8 +21,12 @@ doesn't report but you need to interpret the numbers. Results are written to `<a
 
 **Questions to answer with *your* numbers:** Does SFT hurt R@1 vs pre-rank? Does RL recover it? Do
 rejection traces beat targeted ones? Is any gain bigger than the noise? `bootstrap_ci` gives a 95 %
-bootstrap interval for R@1 (resample examples with replacement). The paper reports no variance. With
-~1.5k test examples, ±2 points of R@1 is within noise.
+bootstrap interval for R@1 (resample examples with replacement). The paper reports no variance.
+Greedy evaluation costs ~10–15 s per example on your GPU, so `eval.max_examples` defaults to **300**
+(~1 h per checkpoint, ×6 checkpoints). At n = 300, the 95 % interval on R@1 is about **±5 points**.
+Differences smaller than that are noise. The paper's RL-vs-pre-rank gains on Beauty are 0.4–0.9 points
+of R@1, so be honest about what your table can and cannot show. Run the best two rows on more examples
+overnight if you want tighter intervals.
 
 ## The live demo (`demo.py`)
 

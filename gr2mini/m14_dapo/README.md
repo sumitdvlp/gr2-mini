@@ -59,8 +59,11 @@ for ppo_epochs:
 
 ## Budget on 6 GB
 
-Each prompt: G = 4 samples × up to 384 new tokens at ~8–10 decoding steps/s ≈ 40 s, plus ~10 s of
-training. A step with 2 kept prompts (+ rejected draws) takes ~1.5–2 min, so 100 steps ≈ 3 h. `tiny`: 6 steps.
+Each prompt: G = 4 samples × up to 384 new tokens at ~10 decoding steps/s (merged LoRA, fp32) ≈ 40 s,
+plus ~10–15 s of training (4 sequences × ~1,250 tokens). My fp16 smoke run did 2 steps in 7.4 min with
+2/2 informative groups at step 1 and `ratio_mean = 1.000`. That confirms the dropout fix: π_old = π_θ
+before the update. Peak VRAM was 2.8 GB in fp16, so expect ~4.5 GB in fp32. In fp32 with merging, a
+step takes ~1.5–2 min, so 100 steps ≈ 3 h. `tiny`: 6 steps.
 
 ## Implementation order & test
 

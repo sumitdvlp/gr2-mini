@@ -42,7 +42,7 @@ Every *algorithm* in the paper is implemented. Only the *sizes* change.
 | Text encoder | not named | `all-MiniLM-L6-v2` (22 M params, 384-d) | Fast, good enough |
 | SID tokenizer | RQ-VAE + EMA + k-means init + dead-code reset + diversity + contrastive + random last level | **all of it** | Fully faithful (tiny MLP, trains in minutes) |
 | Retriever (pre-rank) | mid-trained Qwen3-8B | **SASRec** (small transformer) | An 8B retriever is impossible on 6 GB; SASRec has similar Recall@10 on Beauty |
-| Student LLM | Qwen3-8B (full fine-tune) | **Qwen3-0.6B** + LoRA + trainable SID-token embeddings | Fits in ~4 GB of free VRAM |
+| Student LLM | Qwen3-8B (full fine-tune) | **Qwen3-0.6B** in fp32 + LoRA + trainable SID-token embeddings | Fits in ~4.3 GB of VRAM |
 | Teacher LLM | Qwen3-32B | Local model through Ollama (e.g. `qwen3:8b` 4-bit), or any OpenAI-compatible API | 32B can't run locally |
 | RL | DAPO (verl-style, multi-GPU) | DAPO **written from scratch** in plain PyTorch | That's the most educational part! |
 
@@ -137,8 +137,12 @@ The `tiny` config writes to `data/processed_tiny/` and `artifacts/tiny/` so both
 
 ## 7. Your hardware — what to keep in mind
 
-* **GTX 1660 Ti = Turing, compute capability 7.5.** It has fast fp16 but **no native bf16**
-  (that needs 8.0+). Most LLM tutorials use bf16, so watch out for that. We use fp16 or fp32; m00 checks this.
+* **GTX 1660 Ti = Turing (7.5) without tensor cores.** fp16 matmuls are **8× slower than fp32** on it
+  (measured), and there's no native bf16. Most LLM tutorials assume bf16/fp16. **We run everything in
+  fp32** (see the m00 correction).
+* **CUDA sysmem fallback:** on Windows, running out of VRAM silently spills into system RAM and makes
+  training crawl, with no error. Watch `nvidia-smi`, or set the NVIDIA Control Panel "CUDA – Sysmem
+  Fallback Policy" to "Prefer No Sysmem Fallback".
 * **6 GB VRAM, but Windows uses ~1.5–2 GB of it for the display** (WDDM). Plan for ~4 GB.
   Close browsers or games while training.
 * **Windows:** no vLLM, no flash-attention 2, and `DataLoader(num_workers>0)` needs the
@@ -146,8 +150,9 @@ The `tiny` config writes to `data/processed_tiny/` and `artifacts/tiny/` so both
 * **Windows console encoding:** printing tokenizer output (e.g. `Ġ`) or product titles can crash with
   `UnicodeEncodeError: 'charmap' codec...`. Run `$env:PYTHONUTF8 = "1"` once per terminal, or add it to
   your PowerShell profile.
-* Rough wall-clock budget on your machine (full Beauty): data + SIDs + SASRec ≈ 15 min;
-  mid-training ≈ 2–3 h; teacher traces ≈ 1–3 h; SFT ≈ 30 min; DAPO ≈ 2–3 h; eval ≈ 30–60 min.
+* Wall-clock budget on your machine (full Beauty), measured with my reference implementation:
+  data + SIDs ≈ 5 min; SASRec ≈ 7 min; mid-training ≈ 1–3.5 h; teacher traces ≈ 1–3 h; SFT ≈ 30–45 min
+  per trace type; DAPO ≈ 3 h per run; evaluation ≈ 1 h per checkpoint (300 test examples).
 
 ## 8. Where the paper is ambiguous — and what we do
 

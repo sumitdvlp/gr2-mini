@@ -7,7 +7,7 @@
 ## What you'll build
 
 ```
-Qwen3-0.6B (fp16, 1.2 GB)
+Qwen3-0.6B (fp32, 2.4 GB: on your card fp32 is 8x faster than fp16, see the m00 correction)
   + 2 + L·C new tokens  <|sid_begin|> <|sid_end|> <s_a_0> ... <s_d_255>      sid_tokens.py
   + LoRA on all attention/MLP projections  +  trainable rows for ONLY the new tokens   lora.py
   → token_logprobs(...)     memory-efficient log p(token | prefix)          logprobs.py  (SFT + RL use this)
@@ -48,12 +48,13 @@ Full fine-tuning: ~16 bytes × 0.6 B params ≈ 10 GB, impossible. Our trainable
 * **only the 1,026 new embedding rows**, via PEFT's `trainable_token_indices={"embed_tokens": ids}`.
   PEFT keeps a small delta for those rows and handles the tied `lm_head`.
 
-Measured on your GPU: 11.1 M trainable params (1.8 %), all fp32 (good: fp16 *trainable* weights would
-underflow), and a 1,500-token training step peaks at **2.4 GB**.
+Measured on your GPU (fp32 weights): ~10–11 M trainable params (1.7–1.8 %), and a 1,500-token training step
+takes **2.8 s and peaks at 4.3 GB**. (In fp16 it peaked at 2.4 GB but took ~10 s: on a GTX 16xx, memory
+isn't the bottleneck, fp16 compute is.)
 
 ⚠️ **The eval-mode trap (I hit this when measuring):** `from_pretrained` returns the model in
 **eval mode**, and HF silently skips gradient checkpointing in eval mode. The same step then peaked at
-**5.9 GB** instead of 2.4. Always call `model.train()` before training steps.
+far more memory. Always call `model.train()` before training steps.
 
 ## 3. Log-probs only where you need them (`logprobs.py`)
 
@@ -81,8 +82,16 @@ Use the chat template with `enable_thinking=False`. Even then, Qwen3 puts an *em
 `<think>\n\n</think>\n\n` at the start of the assistant turn. The generation prompt already contains
 it, so completions start directly with the answer.
 
-Speed on your GPU: ~8–10 new tokens/s per step (batched sequences share steps). LoRA layers add Python
-overhead per token. That's slow, and it's why the RL budget is small.
+Speed on your GPU (fp32, 4 sequences × 900-token prompt), measured:
+
+| model | decoding steps/s |
+|---|---|
+| LoRA + trainable tokens, unmerged | 6.5 |
+| **LoRA merged** (`merge_adapter()`) | **10.5** |
+
+Decoding one token at a time is dominated by per-module overhead, and LoRA adds 196 small modules.
+So `generate_chat` merges the adapters into the base weights, generates, and unmerges in a
+`finally` block. That's exact in fp32 (max logit difference 5e-5), and the tests check the unmerge.
 
 ---
 

@@ -171,13 +171,30 @@ def test_generate_chat_structure_determinism_and_mode_restore():
     assert len(samp) == 1 and len(samp[0]) == 3
 
 
+def test_generate_chat_merges_lora_temporarily():
+    tok, model = qwen_tokenizer(), tiny_qwen()
+    ids = add_sid_tokens(tok, model, L, C)
+    pm = apply_lora(model, TINY_LORA_CFG, ids)
+    with torch.no_grad():  # make LoRA non-trivial
+        for n, p in pm.named_parameters():
+            if "lora_B" in n:
+                p.normal_(0, 0.5)
+    probe = torch.tensor([[100, 200, 300]])
+    before = pm(input_ids=probe).logits.detach().clone()
+    out = generate_chat(pm, tok, [[{"role": "user", "content": "hi"}]], max_new_tokens=4)
+    assert len(out[0]) == 1
+    merged = [m for m in pm.modules() if getattr(m, "merged", False)]
+    assert not merged, "unmerge_adapter() must run after generation (use try/finally)"
+    torch.testing.assert_close(pm(input_ids=probe).logits.detach(), before, atol=1e-4, rtol=1e-4)
+
+
 # ======================================================================= the real model
 @pytest.mark.integration
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a CUDA GPU")
 def test_load_student_on_gpu():
     from gr2mini.m07_llm.load import load_student
 
-    cfg = {"model_name": "Qwen/Qwen3-0.6B", "dtype": "fp16", **TINY_LORA_CFG, "lora_r": 16, "lora_alpha": 32,
+    cfg = {"model_name": "Qwen/Qwen3-0.6B", "dtype": "fp32", **TINY_LORA_CFG, "lora_r": 16, "lora_alpha": 32,
            "gradient_checkpointing": True}
     model, tok, ids = load_student(cfg, 4, 256, device="cuda")
     assert ids[0] == 151669 and ids[-1] == 152694

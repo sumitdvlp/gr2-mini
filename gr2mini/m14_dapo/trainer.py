@@ -68,7 +68,7 @@ def dapo_update(model, optimizer, groups: Sequence[Group], rl_cfg: dict, pad_id:
        rl_cfg.get("micro_batch_size", 1) sequences: logp = token_logprobs(...);
        loss, st = dapo_loss(logp, old, adv_chunk, target_mask_chunk, eps_low, eps_high, num_tokens);
        backward (through scaler.scale if a scaler is given); then clip grads at 1.0 and step
-       (scaler.step / scaler.update if given)
+       (scaler.step / scaler.update if given). Use fp16 autocast only if a scaler is given.
     The model must be in train mode during the updates.
     """
     raise NotImplementedError("TODO(m14): implement dapo_update")
@@ -89,7 +89,8 @@ def train_dapo(
     """The full loop. Returns one history entry per step.
 
     * disable_dropout(model); model.train(); AdamW(trainable params, lr=rl_cfg["lr"]);
-      GradScaler("cuda") if the model is on CUDA, else None; rng = random.Random(seed)
+      GradScaler("cuda") only if the model is on CUDA AND holds fp16 weights, else None (fp32: the
+      default on your GPU); rng = random.Random(seed)
     * stop_ids = {id of "<|im_end|>", tokenizer.eos_token_id, tokenizer.pad_token_id} (ignore None)
     * for step in 1..rl_cfg["steps"]:
           groups, st = collect_groups(...)

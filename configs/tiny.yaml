@@ -20,6 +20,7 @@ retriever:
 
 midtrain:
   max_examples: 3000
+  epochs: 3
   probe_examples: 50
 
 traces:

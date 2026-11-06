@@ -36,13 +36,18 @@ def train_lm(
     """Fine-tune `model` on tokenized features. Returns the history: one entry per optimizer step,
     {"step": 1-based int, "loss": mean micro-batch loss of that step, "lr": current lr}.
 
-    cfg keys: epochs, batch_size, grad_accum, lr, warmup_steps, log_every.
+    cfg keys: epochs, batch_size, grad_accum, lr, warmup_steps, log_every, and optional token_lr.
         * model.train(); optimizer = AdamW over parameters with requires_grad only
+        * token_lr (cfg.get("token_lr"), default None): if not None, use TWO param groups: trainable
+          params whose name contains "trainable_tokens" (the new SID rows) get lr=token_lr, all others
+          lr=cfg["lr"]. (Use `is not None`: token_lr=0.0 is a valid "freeze the SID rows" setting.)
+          The LambdaLR schedule scales both groups.
         * total optimizer steps = epochs * ceil(ceil(N / batch_size) / grad_accum)
           (a trailing partial accumulation still makes a step)
         * each epoch: order = torch.randperm(N, generator=generator); micro-batches of batch_size
-        * CUDA: torch.autocast("cuda", dtype=torch.float16) + torch.amp.GradScaler("cuda").
-          CPU: plain fp32, no scaler.
+        * Mixed precision ONLY if the model holds fp16 weights (any parameter with dtype float16) and is
+          on CUDA: torch.autocast("cuda", dtype=torch.float16) + torch.amp.GradScaler("cuda").
+          Otherwise (fp32 model: the default on your GTX 1660 Ti, see m00; or CPU): plain fp32, no scaler.
         * backward(loss / grad_accum); at each step: (unscale), clip_grad_norm_(trainable, 1.0),
           optimizer.step(), scheduler.step() (LambdaLR with lr_lambda), zero_grad
         * log every `log_every` steps if log is not None

@@ -46,11 +46,29 @@ weighted_lm_loss = − Σ_t w_t · log p(token_t) / #(tokens with w_t > 0)      
 ```
 
 `train_lm`: AdamW over trainable params only, linear warmup then linear decay, gradient accumulation,
-fp16 autocast + `GradScaler` on CUDA (the trainable params are fp32, see m07), and gradient clipping at 1.0.
+and gradient clipping at 1.0. fp16 autocast + `GradScaler` only if the model holds fp16 weights. On
+your card we use fp32 (m00 correction), so it's plain fp32 training.
 **`model.train()` first** (the m07 eval-mode trap).
 
 How to normalize with accumulation: each micro-batch loss is already a mean, so divide it by
 `grad_accum` before `backward()`. Then an accumulated step is the mean of its micro-batches.
+
+## Learning rates: what I found by experiment
+
+The new SID rows start as identical copies of "the mean token", and they have to become 1,026
+*distinguishable* vectors. At typical LoRA settings that barely happens. My reference runs taught
+200 items (caption + reverse tasks) and then asked for each item's SID back:
+
+| LoRA `lr` | SID-row `token_lr` | epochs | generated SIDs that are real items | exact item recall | caption F1 |
+|---|---|---|---|---|---|
+| 2e-4 | (same) | 5 | 0 % | 0 % | 0.01 |
+| 2e-4 | 2e-3 | 5 | 98 % | 0 % | 0.02 |
+| **1e-3** | **5e-3** | **10** | **100 %** | **100 %** | **0.66** |
+
+Lessons: (1) **a separate, larger lr for the new embedding rows matters.** That's why `train_lm` takes
+`token_lr` (two AdamW param groups). (2) Grounding is memorization, so every item needs **repeated
+exposure**. One pass over the data is not enough. Hence `lr: 0.001, token_lr: 0.005, epochs: 2` in the
+config. If your probes stay at ~0 after training, this is the first thing to check.
 
 ## Probes (`probe.py`): did it learn anything?
 
@@ -64,9 +82,15 @@ with an 8B model. That's fine: we only need the re-ranker to *understand* SIDs.
 
 ## Budget
 
-Full Beauty ≈ 24k caption/reverse examples + 67k sequential examples ≈ 90k short sequences. One epoch
-with batch 8 × accum 2 takes ~2–3 h on your GPU. Use `--set midtrain.max_examples=20000` for a ~40 min
-version. `tiny`: 3,000 examples, ~5 min.
+Measured with the reference on your GPU (fp32): **2.2 s per optimizer step** (batch 8 × accum 2 of
+~73-token examples), peak 4.25 GB. Full Beauty ≈ 24k caption/reverse + 67k sequential ≈ 90k examples
+≈ 5.6k steps ≈ **3.5 h per epoch**, so 2 epochs ≈ 7 h (an overnight run).
+`--set midtrain.max_examples=30000` gives a ~2.3 h version (2 epochs). `tiny` (3,000 examples × 3 epochs): ~20 min.
+
+**Don't judge mid-training on `tiny`.** In my smoke run the model learned the SID *format* (it emitted
+well-formed `<|sid_begin|><s_a_41>…<|sid_end|>`), but the SIDs it produced belonged to no real item.
+`tiny` has 7.4k items and only 3k examples, so most items are never seen even once. Grounding needs
+several exposures per item.
 
 ## Implementation order & test
 

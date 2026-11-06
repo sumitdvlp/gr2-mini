@@ -55,6 +55,13 @@ the ranking *worse*. Imitating explanations doesn't teach the model to rank, and
 trained on a few hundred traces may also simply copy the input order (check `identity_rate`!).
 Measure it yourself. Stage 3 exists for this reason.
 
+## Budget (measured on your GPU, fp32)
+
+Trace conversations are ~1,000 tokens (prompt ~860 + answer). Training: ~2–3 s per sequence, so
+300 traces × 3 epochs ≈ 30–45 min. **Evaluation is the slow part:** greedy decoding of ~300–500 answer
+tokens at ~10 steps/s (batch 4) ≈ 10–15 s per example. That's why `eval.max_examples` is 300 for Beauty
+(~1 h per checkpoint) and 40 for `tiny`.
+
 ## Implementation order & test
 
 `explanation_char_span` → `sft_feature` → `pre_rank_report` → `evaluate_reranker` → `run.py`

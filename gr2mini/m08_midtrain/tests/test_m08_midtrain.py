@@ -141,6 +141,21 @@ def test_train_lm_learns_and_counts_steps():
     assert pm.training
 
 
+def test_train_lm_separate_token_lr():
+    tok, model, ids = _tok_with_sids()
+    pm = apply_lora(model, TINY_LORA_CFG, ids)
+    feats = [tokenize_chat(tok, sequential_example([INDEX.sid_str(1)], INDEX.sid_str(2)), 512)] * 4
+    tok_params = {n: p for n, p in pm.named_parameters() if "trainable_tokens" in n}
+    lora_params = {n: p for n, p in pm.named_parameters() if "lora_B" in n}
+    assert tok_params and lora_params
+    tok_before = {n: p.detach().clone() for n, p in tok_params.items()}
+    lora_before = {n: p.detach().clone() for n, p in lora_params.items()}
+    cfg = {"epochs": 1, "batch_size": 2, "grad_accum": 1, "lr": 0.01, "token_lr": 0.0, "warmup_steps": 0, "log_every": 100}
+    train_lm(pm, feats, cfg, tok.pad_token_id, log=None)
+    assert all(torch.equal(p, tok_before[n]) for n, p in tok_params.items()), "token_lr=0.0 must freeze the SID rows"
+    assert any(not torch.equal(p, lora_before[n]) for n, p in lora_params.items()), "LoRA still trains at lr"
+
+
 # ======================================================================= probes
 def test_word_f1():
     assert word_f1("Argan Oil Shampoo", "argan oil shampoo 8oz") == pytest.approx(2 * 0.75 / 1.75)

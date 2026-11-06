@@ -59,7 +59,7 @@ retriever:              # m06 SASRec (stand-in for the paper's mid-trained LLM r
 
 llm:                    # m07 student
   model_name: Qwen/Qwen3-0.6B
-  dtype: fp16           # your 1660 Ti has no native bf16 (m00)
+  dtype: fp32           # on a GTX 16xx, fp16 matmuls are 8x SLOWER than fp32 (measured, see m00 README)
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05
@@ -73,10 +73,11 @@ midtrain:               # m08 Stage 1
   max_history: 10
   max_examples: null    # cap on the total number of examples (null = all)
   max_len: 512
-  epochs: 1
+  epochs: 2             # each item needs repeated exposure to be grounded (README "Learning rates")
   batch_size: 8
   grad_accum: 2
-  lr: 0.0002
+  lr: 0.001             # LoRA lr. 0.0002 did NOT ground SIDs in my runs
+  token_lr: 0.005       # separate lr for the new SID embedding rows (m08 train_lm)
   warmup_steps: 50
   log_every: 25
   probe_examples: 200
@@ -128,4 +129,4 @@ rl:                     # m14 Stage 3 (DAPO)
 eval:                   # m13 / m15
   max_new_tokens: 512
   batch_size: 4
-  max_examples: null
+  max_examples: 300     # greedy decoding costs ~10-15 s per example on your GPU: 300 ≈ 1 h per checkpoint

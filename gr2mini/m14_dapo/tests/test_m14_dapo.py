@@ -126,6 +126,13 @@ def test_rollout_group_shapes_and_mode_restore():
     assert model.training
 
 
+def test_rollout_group_unmerges_lora():
+    tok, model = _student()
+    msgs = build_rerank_messages(EX, ITEMS, INDEX, "policy", PCFG)
+    rollout_group(model, tok, msgs, group_size=2, max_new_tokens=3)
+    assert not [m for m in model.modules() if getattr(m, "merged", False)], "unmerge after generating"
+
+
 def test_disable_dropout():
     tok, model = _student()
     assert disable_dropout(model) > 0

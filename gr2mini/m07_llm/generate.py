@@ -30,6 +30,9 @@ def generate_chat(
       and restore it afterwards), add_special_tokens=False, move to the model's device.
     * model.eval() and model.config.use_cache = True while generating; restore BOTH afterwards
       (training mode and the previous use_cache value).
+    * Speed: if the model has `merge_adapter` (a PEFT model), call model.merge_adapter() before
+      generating and model.unmerge_adapter() afterwards, ALWAYS (use try/finally). Merged LoRA gives
+      identical outputs and decodes ~1.6x faster on your GPU (README §4).
     * model.generate(..., max_new_tokens, do_sample, temperature (only if sampling), num_return_sequences,
       pad_token_id=tokenizer.pad_token_id)
     * Decode only the NEW tokens with skip_special_tokens=True, strip whitespace.
