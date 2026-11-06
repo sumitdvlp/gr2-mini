@@ -38,6 +38,7 @@ rqvae:                  # paper §2.1-2.3, Appendix A
   batch_size: 1024
   lr: 0.001
   eval_every: 25
+  path: rqvae
 
 sids:
   random_last_levels: 1   # M in Eq. 10: last M levels drawn uniformly at random at assignment time

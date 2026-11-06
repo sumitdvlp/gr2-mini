@@ -31,11 +31,11 @@ def main() -> None:
     texts = [it["text"] for it in items]
     emb = embed_items_cached(
         texts,
-        cfg["paths"]["artifacts_dir"] / "item_emb.npy",
-        lambda: load_sentence_encoder(cfg["model_name"], cfg["device"]),
-        cfg["model_name"],
-        batch_size=cfg["batch_size"],
-        normalize=cfg["normalize"]
+        cfg["paths"]["artifacts_dir"] + "/item_emb.npy",
+        lambda: load_sentence_encoder(cfg["text_embed"]["model_name"], cfg["device"]),
+        cfg["text_embed"]["model_name"],
+        batch_size=cfg["text_embed"]["batch_size"],
+        normalize=cfg["text_embed"]["normalize"]
     )
     
     print(f"emb.shape: {emb.shape}, dtype: {emb.dtype}, mean row norm: {np.mean(np.linalg.norm(emb, axis=1)):.4f}")

@@ -58,17 +58,16 @@ def build_coengagement_neighbors(sequences: Sequence[Sequence[int]], num_items: 
     Example, window=1: sequences [[0, 1, 2], [2, 3]] -> [[1], [0, 2], [1, 3], [2]] (+ [] for unseen items)
     An item never counts as its own neighbour (even if it is repeated in a sequence).
     """
-    neighbors = [[] for _ in range(num_items)]
+    neighbors: list[set[int]] = [set() for _ in range(num_items)]
     for seq in sequences:
         for i, item in enumerate(seq):
             start = max(0, i - window)
             end = min(len(seq), i + window + 1)
             for j in range(start, end):
-                if j != i:
-                    neighbor_item = seq[j]
-                    if neighbor_item not in neighbors[item]:
-                        neighbors[item].append(neighbor_item)
-    return neighbors
+                other = seq[j]
+                if other != item:  # compare ids, not positions: repeats are never self-neighbours
+                    neighbors[item].add(other)
+    return [sorted(n) for n in neighbors]
 
 
 def sample_positives(
