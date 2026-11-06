@@ -10,7 +10,16 @@ def clean_text(s: Any) -> str:
 
     clean_text("  L&#39;Oreal\\n  Paris  ") == "L'Oreal Paris"
     """
-    raise NotImplementedError("TODO(m02): implement clean_text")
+    import html
+    import re
+
+    if s is None:
+        return ""
+    s = str(s)
+    s = html.unescape(s)
+    s = re.sub(r"\s+", " ", s)
+    s = s.strip()
+    return s
 
 
 def build_item_record(item_id: int, asin: str, meta: dict | None) -> dict:
@@ -22,7 +31,32 @@ def build_item_record(item_id: int, asin: str, meta: dict | None) -> dict:
                         entry cleaned and empty entries dropped; [] if missing
         * text:         item_text(record)
     """
-    raise NotImplementedError("TODO(m02): implement build_item_record")
+    if meta is None:
+        title = ""
+        brand = ""
+        categories = []
+    else:
+        title = clean_text(meta.get("title"))
+        brand = clean_text(meta.get("brand"))
+        raw_categories = meta.get("categories", [])
+        if isinstance(raw_categories, list) and raw_categories:
+            first_path = raw_categories[0]
+            if isinstance(first_path, list):
+                categories = [clean_text(cat) for cat in first_path if clean_text(cat)]
+            else:
+                categories = []
+        else:
+            categories = []
+
+    record = {
+        "item_id": item_id,
+        "asin": asin,
+        "title": title,
+        "brand": brand,
+        "categories": categories,
+    }
+    record["text"] = item_text(record)
+    return record
 
 
 def item_text(record: dict) -> str:
@@ -34,4 +68,20 @@ def item_text(record: dict) -> str:
 
     Example: "Title: Hair Gel | Brand: Acme | Category: Beauty > Hair Care"
     """
-    raise NotImplementedError("TODO(m02): implement item_text")
+    parts = []
+    title = record.get("title", "")
+    if title:
+        parts.append(f"Title: {title}")
+    else:
+        parts.append("Title: Unknown product")
+
+    brand = record.get("brand", "")
+    if brand:
+        parts.append(f"Brand: {brand}")
+
+    categories = record.get("categories", [])
+    if categories:
+        category_path = " > ".join(categories)
+        parts.append(f"Category: {category_path}")
+
+    return " | ".join(parts)

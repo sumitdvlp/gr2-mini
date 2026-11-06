@@ -20,4 +20,23 @@ def download_file(url: str, dest: str | Path, overwrite: bool = False, chunk_siz
     Hint: `Path.replace` renames atomically and overwrites if needed.
     Bonus (not tested): show progress with tqdm using the Content-Length header.
     """
-    raise NotImplementedError("TODO(m02): implement download_file")
+    import urllib.request
+
+    dest_path = Path(dest)
+    if dest_path.exists() and not overwrite:
+        return dest_path
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    part_path = dest_path.with_suffix(dest_path.suffix + ".part")
+    try:
+        with urllib.request.urlopen(url) as response, open(part_path, "wb") as out_file:
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                out_file.write(chunk)
+        part_path.replace(dest_path)
+    except Exception:
+        if part_path.exists():
+            part_path.unlink()
+        raise
+    return dest_path

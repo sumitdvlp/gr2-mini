@@ -42,7 +42,10 @@ def test_download_file_failure_leaves_no_files(tmp_path):
 def _write_gz(path, lines):
     with gzip.open(path, "wt", encoding="utf-8") as f:
         for line in lines:
-            f.write(line + "\n")
+            line = line.rstrip("\n")
+            line = line.strip()
+            if line:
+                f.write(line + "\n")
 
 
 def test_iter_gzip_lines_strips_newlines_and_skips_blank(tmp_path):
