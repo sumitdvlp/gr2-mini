@@ -27,7 +27,7 @@ def main() -> None:
     #   6. save_rqvae(model, out_path, extra={"config": cfg, "history": history})
     #   7. Print a small table: epoch | rec | commitment | uniqueness | used codes per level
     #      and the final uniqueness. (m05 then adds the random last level.)
-    raise NotImplementedError("TODO(m04): implement run.main")
+    c
 
 
 if __name__ == "__main__":

@@ -15,7 +15,13 @@ def mlp(dims: Sequence[int]) -> nn.Sequential:
     """Linear layers dims[0]->dims[1]->...->dims[-1] with nn.ReLU between them, NO activation
     after the last layer. mlp([4, 8, 2]) == Sequential(Linear(4, 8), ReLU(), Linear(8, 2)).
     """
-    raise NotImplementedError("TODO(m04): implement mlp")
+    dims = list(dims)
+    layers: list[nn.Module] = []
+    for i in range(len(dims) - 1):
+        layers.append(nn.Linear(dims[i], dims[i + 1]))
+        if i < len(dims) - 2:
+            layers.append(nn.ReLU())
+    return nn.Sequential(*layers)
 
 
 @dataclass
@@ -46,32 +52,78 @@ class RQVAE(nn.Module):
                                so save_rqvae/load_rqvae can rebuild the model.
         """
         super().__init__()
-        raise NotImplementedError("TODO(m04): implement RQVAE.__init__")
+        hidden_dims = list(hidden_dims)
+        self.encoder = mlp([in_dim, *hidden_dims, latent_dim])
+        self.decoder = mlp([latent_dim, *reversed(hidden_dims), in_dim])
+        self.quantizer = ResidualQuantizer(
+            num_levels,
+            codebook_size,
+            latent_dim,
+            use_ema=use_ema,
+            ema_decay=ema_decay,
+            dead_code_threshold=dead_code_threshold,
+        )
+        self.init_kwargs = dict(
+            in_dim=in_dim,
+            latent_dim=latent_dim,
+            hidden_dims=hidden_dims,
+            num_levels=num_levels,
+            codebook_size=codebook_size,
+            use_ema=use_ema,
+            ema_decay=ema_decay,
+            dead_code_threshold=dead_code_threshold,
+        )
 
     @classmethod
     def from_config(cls, in_dim: int, rq_cfg: dict) -> "RQVAE":
         """Build from the `rqvae:` config section (keys: latent_dim, hidden_dims, num_levels,
         codebook_size, use_ema, ema_decay, dead_code_threshold)."""
-        raise NotImplementedError("TODO(m04): implement RQVAE.from_config")
+        return cls(
+            in_dim=in_dim,
+            latent_dim=int(rq_cfg["latent_dim"]),
+            hidden_dims=list(rq_cfg["hidden_dims"]),
+            num_levels=int(rq_cfg["num_levels"]),
+            codebook_size=int(rq_cfg["codebook_size"]),
+            use_ema=bool(rq_cfg.get("use_ema", True)),
+            ema_decay=float(rq_cfg.get("ema_decay", 0.99)),
+            dead_code_threshold=rq_cfg.get("dead_code_threshold"),
+        )
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """x [B, in_dim] -> z [B, latent_dim]."""
-        raise NotImplementedError("TODO(m04): implement RQVAE.encode")
+        return self.encoder(x)
 
     def forward(self, x: torch.Tensor) -> RQVAEOutput:
         """z = encode(x); rq = quantizer(z); x_hat = decoder(rq.z_q)."""
-        raise NotImplementedError("TODO(m04): implement RQVAE.forward")
+        z = self.encode(x)
+        rq = self.quantizer(z)
+        x_hat = self.decoder(rq.z_q)
+        return RQVAEOutput(x_hat=x_hat, z=z, rq=rq)
 
     @torch.no_grad()
     def get_codes(self, x: torch.Tensor, batch_size: int = 4096) -> torch.Tensor:
         """Codes [N, L] for all rows of x, processed in chunks of batch_size. Does not change
         the train/eval mode of the model or any state."""
-        raise NotImplementedError("TODO(m04): implement RQVAE.get_codes")
+        # Encoder is a plain Linear/ReLU MLP and quantizer.encode is pure, so no mode switch needed.
+        device = self.quantizer.codebooks.device
+        dtype = self.quantizer.codebooks.dtype
+        if x.shape[0] == 0:
+            return torch.empty(0, self.quantizer.num_levels, dtype=torch.long, device=device)
+        out = []
+        for start in range(0, x.shape[0], batch_size):
+            chunk = x[start : start + batch_size].to(device=device, dtype=dtype)
+            out.append(self.quantizer.encode(self.encode(chunk)))
+        return torch.cat(out, dim=0)
 
 
 def save_rqvae(model: RQVAE, path: str | Path, extra: dict | None = None) -> None:
     """torch.save({"init_kwargs": ..., "state_dict": ..., "extra": extra or {}}, path). Create parent dirs."""
-    raise NotImplementedError("TODO(m04): implement save_rqvae")
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {"init_kwargs": dict(model.init_kwargs), "state_dict": model.state_dict(), "extra": extra or {}},
+        path,
+    )
 
 
 def load_rqvae(path: str | Path, map_location: str | torch.device = "cpu") -> RQVAE:
@@ -80,4 +132,9 @@ def load_rqvae(path: str | Path, map_location: str | torch.device = "cpu") -> RQ
     Note: torch.load(..., weights_only=True) is the safe default in recent PyTorch. Plain dicts,
     lists, numbers and tensors load fine with it.
     """
-    raise NotImplementedError("TODO(m04): implement load_rqvae")
+    ckpt = torch.load(path, map_location=map_location, weights_only=True)
+    model = RQVAE(**ckpt["init_kwargs"])
+    model.load_state_dict(ckpt["state_dict"])
+    model.to(map_location)
+    model.eval()
+    return model

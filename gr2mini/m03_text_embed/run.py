@@ -6,6 +6,10 @@ from __future__ import annotations
 
 import argparse
 
+from gr2mini.m00_setup.config import load_config
+from gr2mini.m02_data.storage import load_processed
+from gr2mini.m03_text_embed.encoder import embed_items_cached, load_sentence_encoder
+import numpy as np
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Embed item texts.")
@@ -22,8 +26,19 @@ def main() -> None:
     #   5. For `args.show` random items (seeded by cfg["seed"]): print the query text and its
     #      top-5 neighbours from cosine_top_k with their similarity scores.
     #   6. Run it twice. The second run should be instant (cache hit).
-    raise NotImplementedError("TODO(m03): implement run.main")
-
+    cfg = load_config(args.config)
+    items, _, _ = load_processed(cfg["paths"]["processed_dir"])
+    texts = [it["text"] for it in items]
+    emb = embed_items_cached(
+        texts,
+        cfg["paths"]["artifacts_dir"] / "item_emb.npy",
+        lambda: load_sentence_encoder(cfg["model_name"], cfg["device"]),
+        cfg["model_name"],
+        batch_size=cfg["batch_size"],
+        normalize=cfg["normalize"]
+    )
+    
+    print(f"emb.shape: {emb.shape}, dtype: {emb.dtype}, mean row norm: {np.mean(np.linalg.norm(emb, axis=1)):.4f}")
 
 if __name__ == "__main__":
     main()

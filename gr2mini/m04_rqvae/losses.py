@@ -9,7 +9,7 @@ def reconstruction_loss(x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
 
     (Note: this is D times F.mse_loss, which averages over dimensions too.)
     """
-    raise NotImplementedError("TODO(m04): implement reconstruction_loss")
+    return torch.mean(torch.sum((x_hat - x) ** 2, dim=1))
 
 
 def soft_assignments(dists: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
@@ -17,7 +17,7 @@ def soft_assignments(dists: torch.Tensor, temperature: float = 1.0) -> torch.Ten
 
     dists: [B, C] squared distances. Returns [B, C], rows sum to 1.
     """
-    raise NotImplementedError("TODO(m04): implement soft_assignments")
+    return torch.softmax(-dists / temperature, dim=-1)
 
 
 def diversity_loss(dists_per_level: list[torch.Tensor], temperature: float = 1.0) -> torch.Tensor:
@@ -29,4 +29,8 @@ def diversity_loss(dists_per_level: list[torch.Tensor], temperature: float = 1.0
     Equals (#levels) when usage is uniform at every level, and sum_k C_k under total collapse.
     Must be differentiable w.r.t. the distances.
     """
-    raise NotImplementedError("TODO(m04): implement diversity_loss")
+    loss = torch.tensor(0.0, device=dists_per_level[0].device)
+    for dists in dists_per_level:
+        p = soft_assignments(dists, temperature).mean(dim=0)  # [C_k]
+        loss += dists.shape[1] * torch.sum(p**2)
+    return loss
