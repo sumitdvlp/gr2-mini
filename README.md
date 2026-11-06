@@ -100,23 +100,22 @@ Do the modules in order — each one's output is the next one's input.
 | 04 | [m04_rqvae](gr2mini/m04_rqvae/) | §2.1–2.3, App. A | RQ-VAE: k-means++ init, residual quantizer, EMA, dead codes, diversity + contrastive losses | 🟢 ready |
 | 05 | [m05_semantic_ids](gr2mini/m05_semantic_ids/) | §2.3, Eq.10, 33–35 | assign SIDs, random last level, collision resolution, SID ⇄ token strings | 🟢 ready |
 | **Phase C — Candidate generation** |||||
-| 06 | [m06_retriever](gr2mini/m06_retriever/) | §5.1 (pre-rank) | SASRec retriever → top-10 candidate lists | 🟡 preview |
+| 06 | [m06_retriever](gr2mini/m06_retriever/) | §5.1 (pre-rank) | SASRec retriever → top-10 candidate lists | 🟢 ready |
 | **Phase D — Stage 1: tokenized mid-training** |||||
-| 07 | [m07_llm](gr2mini/m07_llm/) | §2.4 | load Qwen3-0.6B, add SID tokens, LoRA, memory-efficient log-probs | 🟡 preview |
-| 08 | [m08_midtrain](gr2mini/m08_midtrain/) | §2.4, App. B | item-alignment tasks + training loop | 🟡 preview |
+| 07 | [m07_llm](gr2mini/m07_llm/) | §2.4 | load Qwen3-0.6B, add SID tokens, LoRA, memory-efficient log-probs | 🟢 ready |
+| 08 | [m08_midtrain](gr2mini/m08_midtrain/) | §2.4, App. B | item-alignment tasks + training loop | 🟢 ready |
 | **Phase E — Stage 2: reasoning traces + SFT** |||||
-| 09 | [m09_prompts](gr2mini/m09_prompts/) | §3.1–3.2, App. C–D | re-ranking chat prompts (targeted / rejection / policy) | 🟡 preview |
-| 10 | [m10_parsing](gr2mini/m10_parsing/) | App. E | robust JSON → regex → validation output parser | 🟡 preview |
-| 11 | [m11_rewards](gr2mini/m11_rewards/) | §4.3 Eq.14–15 | rank-improvement reward + conditional format reward | 🟡 preview |
-| 12 | [m12_traces](gr2mini/m12_traces/) | §3, Eq.11–12 | teacher client, targeted & rejection sampling | 🟡 preview |
-| 13 | [m13_sft](gr2mini/m13_sft/) | §4.2 Eq.13 | SFT with separate reasoning / output loss weights | 🟡 preview |
+| 09 | [m09_prompts](gr2mini/m09_prompts/) | §3.1–3.2, App. C–D | re-ranking chat prompts (targeted / rejection / policy) | 🟢 ready |
+| 10 | [m10_parsing](gr2mini/m10_parsing/) | App. E | robust JSON → regex → validation output parser | 🟢 ready |
+| 11 | [m11_rewards](gr2mini/m11_rewards/) | §4.3 Eq.14–15 | rank-improvement reward + conditional format reward | 🟢 ready |
+| 12 | [m12_traces](gr2mini/m12_traces/) | §3, Eq.11–12 | teacher client, targeted & rejection sampling | 🟢 ready |
+| 13 | [m13_sft](gr2mini/m13_sft/) | §4.2 Eq.13 | SFT with separate reasoning / output loss weights | 🟢 ready |
 | **Phase F — Stage 3: RL** |||||
-| 14 | [m14_dapo](gr2mini/m14_dapo/) | §4.3 Eq.16–17 | DAPO: group rollouts, advantages, dynamic sampling, clip-higher | 🟡 preview |
+| 14 | [m14_dapo](gr2mini/m14_dapo/) | §4.3 Eq.16–17 | DAPO: group rollouts, advantages, dynamic sampling, clip-higher | 🟢 ready |
 | **Phase G — Results** |||||
-| 15 | [m15_eval_demo](gr2mini/m15_eval_demo/) | §5, App. F | evaluation tables (like Tables 5–6) + live re-ranking demo | 🟡 preview |
+| 15 | [m15_eval_demo](gr2mini/m15_eval_demo/) | §5, App. F | evaluation tables (like Tables 5–6) + live re-ranking demo | 🟢 ready |
 
-🟢 = README + stubs + tests ready. 🟡 = lesson preview only; I'll write the stubs and tests with you
-when you get there, so they fit the code you actually wrote in earlier modules.
+🟢 = README + stubs + tests ready (all modules, as of Phase C).
 
 ## 6. Data & artifact flow
 

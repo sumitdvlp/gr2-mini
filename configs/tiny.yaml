@@ -14,3 +14,24 @@ rqvae:
   epochs: 60
   batch_size: 256
   eval_every: 10
+
+retriever:
+  epochs: 60
+
+midtrain:
+  max_examples: 3000
+  probe_examples: 50
+
+traces:
+  num_examples: 20
+
+sft:
+  epochs: 1
+
+rl:
+  steps: 6
+  eval_every: 3
+  eval_examples: 16
+
+eval:
+  max_examples: 40

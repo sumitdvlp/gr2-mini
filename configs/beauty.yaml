@@ -43,3 +43,89 @@ rqvae:                  # paper §2.1-2.3, Appendix A
 sids:
   random_last_levels: 1   # M in Eq. 10: last M levels drawn uniformly at random at assignment time
   max_collision_rounds: 100
+
+retriever:              # m06 SASRec (stand-in for the paper's mid-trained LLM retriever)
+  hidden_dim: 64
+  num_blocks: 2
+  num_heads: 2
+  max_len: 50
+  dropout: 0.5          # 0.5 > 0.2 on Beauty in my runs (README §1)
+  epochs: 200
+  batch_size: 256
+  lr: 0.001
+  eval_every: 5
+  patience: 4           # stop after this many evals without a better valid NDCG@10
+  num_candidates: 10    # |D| in the paper
+
+llm:                    # m07 student
+  model_name: Qwen/Qwen3-0.6B
+  dtype: fp16           # your 1660 Ti has no native bf16 (m00)
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  lora_targets: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  gradient_checkpointing: true
+
+midtrain:               # m08 Stage 1
+  caption: true         # SID -> item text
+  reverse: true         # item text -> SID
+  sequential_per_user: 3  # next-SID examples per user (latest positions of seq[:-2])
+  max_history: 10
+  max_examples: null    # cap on the total number of examples (null = all)
+  max_len: 512
+  epochs: 1
+  batch_size: 8
+  grad_accum: 2
+  lr: 0.0002
+  warmup_steps: 50
+  log_every: 25
+  probe_examples: 200
+
+prompts:                # m09
+  max_history: 10
+  max_title_words: 14
+  max_category_levels: 3
+  knowledge_priming: false   # "KP" in Tables 5-6
+
+traces:                 # m12 teacher (any OpenAI-compatible server: Ollama, LM Studio, a hosted API)
+  base_url: http://localhost:11434/v1
+  model: qwen3:4b
+  api_key_env: null     # name of the environment variable holding the API key, if any
+  temperature: 0.7
+  max_tokens: 1500
+  timeout: 300
+  max_attempts: 4       # rejection sampling: tries per example
+  num_examples: 300     # how many rerank_train examples to try
+
+sft:                    # m13 Stage 2
+  lambda_reasoning: 0.5 # lambda_r in Eq. 13
+  lambda_output: 1.0    # lambda_o in Eq. 13 (paper: lambda_r < lambda_o)
+  max_len: 2048
+  epochs: 3
+  batch_size: 1
+  grad_accum: 8
+  lr: 0.0001
+  warmup_steps: 10
+  log_every: 10
+
+rl:                     # m14 Stage 3 (DAPO)
+  group_size: 4         # G
+  prompts_per_step: 2
+  steps: 100
+  max_new_tokens: 384
+  temperature: 1.0
+  eps_low: 0.2
+  eps_high: 0.28        # clip-higher
+  format_alpha: 0.1     # alpha in Eq. 15
+  conditional_format: true  # false = the reward-hacking ablation
+  ppo_epochs: 1
+  micro_batch_size: 1   # sequences per backward pass (token normalization spans the whole step)
+  max_resample: 4      # dynamic sampling: extra prompt draws allowed per step
+  lr: 0.00001
+  eval_every: 25
+  eval_examples: 100
+
+eval:                   # m13 / m15
+  max_new_tokens: 512
+  batch_size: 4
+  max_examples: null
